@@ -1,15 +1,45 @@
-// This file contains the JavaScript logic for the Snake game.
+// Responsive, mobile-friendly Snake Game
 
 const canvas = document.getElementById('snake');
 const ctx = canvas.getContext('2d');
-const box = 20;
-let snake = [{ x: 9 * box, y: 10 * box }];
-let direction = null;
-let food = spawnFood();
-let score = 0;
-let speed = 150;
-let gameInterval = null;
-let isPaused = false;
+let box = 20, cols = 40, rows = 20;
+let snake, direction, food, score, speed, gameInterval, isPaused;
+
+// Responsive canvas
+function resizeCanvas() {
+    const width = Math.max(240, Math.min(window.innerWidth * 0.95, 900));
+    const height = Math.floor(width / 2);
+    canvas.width = width;
+    canvas.height = height;
+
+    if (width < 500) {
+        cols = 20;
+    } else if (width < 800) {
+        cols = 30;
+    } else {
+        cols = 40;
+    }
+    box = Math.floor(width / cols);
+    rows = Math.floor(height / box);
+
+    draw();
+}
+window.addEventListener('resize', resizeCanvas);
+window.addEventListener('DOMContentLoaded', resizeCanvas);
+
+// Game logic
+function spawnFood() {
+    let newFood;
+    while (true) {
+        newFood = {
+            x: Math.floor(Math.random() * cols) * box,
+            y: Math.floor(Math.random() * rows) * box
+        };
+        if (!snake.some(segment => segment.x === newFood.x && segment.y === newFood.y)) {
+            return newFood;
+        }
+    }
+}
 
 function draw() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -48,20 +78,6 @@ function draw() {
     ctx.closePath();
 }
 
-function spawnFood() {
-    let newFood;
-    while (true) {
-        newFood = {
-            x: Math.floor(Math.random() * (canvas.width / box)) * box,
-            y: Math.floor(Math.random() * (canvas.height / box)) * box
-        };
-        // Make sure food doesn't spawn on the snake
-        if (!snake.some(segment => segment.x === newFood.x && segment.y === newFood.y)) {
-            return newFood;
-        }
-    }
-}
-
 function update() {
     if (isPaused) return;
 
@@ -73,10 +89,10 @@ function update() {
     if (direction === "DOWN") head.y += box;
 
     // Wall wrap
-    if (head.x < 0) head.x = canvas.width - box;
-    if (head.x >= canvas.width) head.x = 0;
-    if (head.y < 0) head.y = canvas.height - box;
-    if (head.y >= canvas.height) head.y = 0;
+    if (head.x < 0) head.x = (cols - 1) * box;
+    if (head.x >= cols * box) head.x = 0;
+    if (head.y < 0) head.y = (rows - 1) * box;
+    if (head.y >= rows * box) head.y = 0;
 
     // Self collision
     if (snake.some(segment => segment.x === head.x && segment.y === head.y)) {
@@ -106,6 +122,7 @@ function gameLoop() {
 
 function gameOver() {
     clearInterval(gameInterval);
+    gameInterval = null;
     document.getElementById('gameOver').style.display = 'block';
 }
 
@@ -118,7 +135,10 @@ function getInitialSpeed() {
 }
 
 function resetGame() {
-    snake = [{ x: 9 * box, y: 10 * box }];
+    // Start snake in the center
+    const startX = Math.floor(cols / 2) * box;
+    const startY = Math.floor(rows / 2) * box;
+    snake = [{ x: startX, y: startY }];
     direction = "RIGHT";
     food = spawnFood();
     score = 0;
@@ -126,11 +146,12 @@ function resetGame() {
     document.getElementById('score').textContent = "Score: 0";
     document.getElementById('gameOver').style.display = 'none';
     clearInterval(gameInterval);
-    gameInterval = null; // <-- Add this line
-    isPaused = false;    // <-- Add this line to ensure game is not paused
+    gameInterval = null;
+    isPaused = false;
     draw();
 }
 
+// Keyboard controls
 document.addEventListener('keydown', e => {
     if (e.key === "ArrowLeft" && direction !== "RIGHT") direction = "LEFT";
     if (e.key === "ArrowUp" && direction !== "DOWN") direction = "UP";
@@ -138,9 +159,28 @@ document.addEventListener('keydown', e => {
     if (e.key === "ArrowDown" && direction !== "UP") direction = "DOWN";
 });
 
+// Touch controls
+document.getElementById('upBtn').addEventListener('touchstart', e => {
+    e.preventDefault();
+    if (direction !== "DOWN") direction = "UP";
+});
+document.getElementById('downBtn').addEventListener('touchstart', e => {
+    e.preventDefault();
+    if (direction !== "UP") direction = "DOWN";
+});
+document.getElementById('leftBtn').addEventListener('touchstart', e => {
+    e.preventDefault();
+    if (direction !== "RIGHT") direction = "LEFT";
+});
+document.getElementById('rightBtn').addEventListener('touchstart', e => {
+    e.preventDefault();
+    if (direction !== "LEFT") direction = "RIGHT";
+});
+
+// Button controls
 document.getElementById('startBtn').onclick = () => {
     if (!gameInterval) {
-        if (!direction) direction = "RIGHT"; // Ensure direction is set
+        if (!direction) direction = "RIGHT";
         isPaused = false;
         gameInterval = setInterval(gameLoop, speed);
     }
@@ -150,9 +190,7 @@ document.getElementById('pauseBtn').onclick = () => {
 };
 document.getElementById('resetBtn').onclick = () => {
     resetGame();
-    gameInterval = setInterval(gameLoop, speed);
 };
-
 document.getElementById('difficulty').onchange = () => {
     resetGame();
 };
